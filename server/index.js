@@ -64,7 +64,8 @@ app.post('/api/generate-plan', async (req, res) => {
     }
 
     const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+    const modelName = process.env.GEMINI_MODEL || 'gemini-3.8-flash';
+    const model = genAI.getGenerativeModel({ model: modelName });
 
     const prompt = buildPrompt({
       eventType, eventName, date, time, city, guestCount, budget,
@@ -111,7 +112,8 @@ app.post('/api/regenerate-section', async (req, res) => {
     }
 
     const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+    const modelName = process.env.GEMINI_MODEL || 'gemini-3.8-flash';
+    const model = genAI.getGenerativeModel({ model: modelName });
 
     const prompt = `You are an expert event planner in India. Regenerate ONLY the "${sectionTitle}" section for the following event.
 

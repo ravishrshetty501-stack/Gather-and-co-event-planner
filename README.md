@@ -94,7 +94,7 @@ Planning any event — whether an intimate 25th birthday party, an 800-guest Ind
 | **Routing** | React Router DOM v7 | Client-side page navigation |
 | **Persistence** | Browser `localStorage` | Fast, reliable, zero-cost state persistence |
 | **Backend** | Node.js + Express 5 | Lightweight, secure proxy keeping API keys confidential |
-| **AI Engine** | Google Gemini 2.0 Flash | Fast inference, structured output parsing, Indian cultural context |
+| **AI Engine** | Google Gemini 3.8 Flash | Fast inference, structured output parsing, Indian cultural context |
 
 ---
 
