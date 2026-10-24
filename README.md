@@ -1,13 +1,13 @@
 # 🎉 Celebration & Event Planner
 
-> **PromptWars Challenge 05** — An AI-powered event planning studio that crafts personalized, budget-conscious event plans for birthdays, weddings, college fests, anniversaries, and other celebrations.
+> An AI-powered event planning studio that crafts personalized, budget-conscious event plans for birthdays, weddings, college fests, anniversaries, and other celebrations.
 
 ---
 
 ## 🌟 Demo & Deployment Links
 
 - 🌐 **Public Deployment URL:** `[PLACEHOLDER: Add your deployment URL here, e.g. https://your-event-planner.vercel.app]`
-- 🎥 **Mandatory Demo Video:** `[PLACEHOLDER: Add your YouTube / Loom demo video link here]`
+- 🎥 **Demo Video:** `[PLACEHOLDER: Add your YouTube / Loom demo video link here]`
 
 ---
 
@@ -29,7 +29,7 @@
 
 ## 📖 Project Overview
 
-Planning any event — whether an intimate 25th birthday party, an 800-guest Indian wedding reception, or a college cultural festival — is often stressful, chaotic, and hard to budget accurately.
+Planning any event — whether an intimate birthday party, a large wedding reception, or a college festival — is often stressful, chaotic, and hard to budget accurately.
 
 **Celebration & Event Planner** solves this by leveraging **Google Gemini** through a secure Node.js backend. Users simply provide their event details (type, guest count, budget in ₹, city, theme, dietary requirements, and special notes), and receive a comprehensive 8-pillar event plan:
 
@@ -79,7 +79,7 @@ Planning any event — whether an intimate 25th birthday party, an 800-guest Ind
                            ▼
 ┌────────────────────────────────────────────────────────┐
 │                Google Gemini API                       │
-│  Model: gemini-2.0-flash via @google/generative-ai     │
+│  Model: gemini-3.8-flash via @google/generative-ai     │
 └────────────────────────────────────────────────────────┘
 ```
 
@@ -94,7 +94,7 @@ Planning any event — whether an intimate 25th birthday party, an 800-guest Ind
 | **Routing** | React Router DOM v7 | Client-side page navigation |
 | **Persistence** | Browser `localStorage` | Fast, reliable, zero-cost state persistence |
 | **Backend** | Node.js + Express 5 | Lightweight, secure proxy keeping API keys confidential |
-| **AI Engine** | Google Gemini 3.8 Flash | Fast inference, structured output parsing, Indian cultural context |
+| **AI Engine** | Google Gemini 3.8 Flash | Fast inference, structured output parsing, cultural context |
 
 ---
 
@@ -230,14 +230,14 @@ Expected output:
 ### Current Limitations
 - **Cost Estimates are Indicative:** All budget numbers are market-rate approximations. Real venue rates, catering minimums, and peak season surcharges require direct vendor quotes.
 - **Client-Side Persistence:** Plans are saved in the browser's `localStorage` and will not sync across different devices or incognito sessions.
-- **Text & Concept Generation:** Does not yet book vendors, process online payments, or integrate live Google Maps venue data.
+- **Text & Concept Generation:** Does not yet book vendors, process online payments, or integrate live maps data.
 
 ### Planned Enhancements
 - [ ] Export plans to PDF with branded headers
 - [ ] Multi-currency support (USD, EUR, GBP, AED)
 - [ ] Collaborative plan sharing via shareable links
 - [ ] RSVP tracking portal for guests
-- [ ] Vendor shortlist scraper for major Indian metros
+- [ ] Vendor shortlist discovery
 
 ---
 
@@ -261,7 +261,7 @@ event/
 │       ├── index.css         # Design system & responsive styles
 │       ├── types.ts          # Core TypeScript interfaces & constants
 │       ├── api.ts            # API service layer (health, generate, regen)
-│       ├── demoData.ts       # Sample Bollywood 25th birthday plan
+│       ├── demoData.ts       # Sample event plan
 │       ├── storage.ts        # localStorage helper functions
 │       ├── markdown.ts       # Lightweight markdown-to-HTML parser
 │       ├── components/
@@ -277,11 +277,11 @@ event/
 │
 └── server/                   # Backend Node.js + Express API
     ├── package.json          # Backend dependencies
-    └── index.js              # Express app with Gemini 2.0 Flash integration
+    └── index.js              # Express app with Google Gemini integration
 ```
 
 ---
 
 ## 📄 License
 
-ISC License. Built for **PromptWars Challenge 05**.
+ISC License.

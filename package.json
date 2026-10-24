@@ -1,7 +1,7 @@
 {
   "name": "celebration-and-event-planner",
   "version": "1.0.0",
-  "description": "Celebration & Event Planner — AI-Powered Event Planning Studio for PromptWars Challenge 05",
+  "description": "Celebration & Event Planner — AI-Powered Event Planning Studio",
   "scripts": {
     "server": "npm run start --prefix server",
     "server:dev": "npm run dev --prefix server",
