@@ -1,0 +1,24 @@
+{
+  "name": "celebration-and-event-planner",
+  "version": "1.0.0",
+  "description": "Celebration & Event Planner — AI-Powered Event Planning Studio for PromptWars Challenge 05",
+  "scripts": {
+    "server": "npm run start --prefix server",
+    "server:dev": "npm run dev --prefix server",
+    "client": "npm run dev --prefix client",
+    "client:build": "npm run build --prefix client",
+    "install:all": "npm install --prefix server && npm install --prefix client",
+    "build": "npm run client:build"
+  },
+  "keywords": [
+    "event-planner",
+    "celebration",
+    "gemini",
+    "react",
+    "vite",
+    "typescript",
+    "express"
+  ],
+  "author": "",
+  "license": "ISC"
+}
