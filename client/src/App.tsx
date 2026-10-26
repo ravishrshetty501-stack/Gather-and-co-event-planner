@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useNavigate, Navigate } from 'react-router-dom';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import ToastContainer from './components/ToastContainer';
@@ -9,12 +9,14 @@ import ResultsPage from './pages/ResultsPage';
 import SavedPlansPage from './pages/SavedPlansPage';
 import LoadingPage from './pages/LoadingPage';
 import { generatePlan } from './api';
-import type { EventDetails, EventPlan, Toast } from './types';
+import { deleteSavedPlan } from './storage';
+import type { EventDetails, EventPlan, Toast, SavedPlan } from './types';
 
 function AppRoutes() {
   const navigate = useNavigate();
   const [eventDetails, setEventDetails] = useState<EventDetails | null>(null);
   const [plan, setPlan] = useState<EventPlan | null>(null);
+  const [currentPlanId, setCurrentPlanId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isDemo, setIsDemo] = useState(false);
   const [toasts, setToasts] = useState<Toast[]>([]);
@@ -37,6 +39,7 @@ function AppRoutes() {
     try {
       const response = await generatePlan(details);
       setPlan(response.plan);
+      setCurrentPlanId(null);
       navigate('/results');
       addToast('Event plan generated successfully! 🎉', 'success');
     } catch (err: unknown) {
@@ -51,14 +54,58 @@ function AppRoutes() {
   const handleLoadDemo = useCallback((details: EventDetails, demoPlan: EventPlan) => {
     setEventDetails(details);
     setPlan(demoPlan);
+    setCurrentPlanId(null);
     setIsDemo(true);
   }, []);
 
-  const handleLoadPlan = useCallback((details: EventDetails, savedPlan: EventPlan) => {
-    setEventDetails(details);
-    setPlan(savedPlan);
+  const handleLoadPlan = useCallback((savedPlan: SavedPlan) => {
+    setEventDetails(savedPlan.eventDetails);
+    setPlan(savedPlan.plan);
+    setCurrentPlanId(savedPlan.id);
     setIsDemo(false);
   }, []);
+
+  const handlePlanSaved = useCallback((saved: SavedPlan) => {
+    setCurrentPlanId(saved.id);
+    setEventDetails(saved.eventDetails);
+    setPlan(saved.plan);
+  }, []);
+
+  const handleNewPlan = useCallback(() => {
+    setEventDetails(null);
+    setPlan(null);
+    setCurrentPlanId(null);
+    setIsDemo(false);
+    navigate('/create');
+  }, [navigate]);
+
+  const handleClearPlan = useCallback(() => {
+    setEventDetails(null);
+    setPlan(null);
+    setCurrentPlanId(null);
+    setIsDemo(false);
+  }, []);
+
+  const handleDeleteCurrentPlan = useCallback(() => {
+    if (currentPlanId) {
+      deleteSavedPlan(currentPlanId);
+    }
+    setEventDetails(null);
+    setPlan(null);
+    setCurrentPlanId(null);
+    setIsDemo(false);
+    addToast('Event plan deleted.', 'success');
+    navigate('/saved');
+  }, [currentPlanId, navigate, addToast]);
+
+  const handlePlanDeleted = useCallback((deletedId: string) => {
+    if (currentPlanId === deletedId) {
+      setEventDetails(null);
+      setPlan(null);
+      setCurrentPlanId(null);
+      setIsDemo(false);
+    }
+  }, [currentPlanId]);
 
   const handleUpdatePlan = useCallback((updated: EventPlan) => {
     setPlan(updated);
@@ -71,7 +118,14 @@ function AppRoutes() {
         <Route path="/" element={<HomePage onLoadDemo={handleLoadDemo} />} />
         <Route
           path="/create"
-          element={<CreateEventPage onSubmit={handleFormSubmit} isLoading={isLoading} />}
+          element={
+            <CreateEventPage
+              initialDetails={eventDetails}
+              onSubmit={handleFormSubmit}
+              isLoading={isLoading}
+              onClearPlan={handleClearPlan}
+            />
+          }
         />
         <Route path="/loading" element={<LoadingPage />} />
         <Route
@@ -80,16 +134,39 @@ function AppRoutes() {
             <ResultsPage
               eventDetails={eventDetails}
               plan={plan}
+              currentPlanId={currentPlanId}
               isDemo={isDemo}
               onUpdatePlan={handleUpdatePlan}
+              onPlanSaved={handlePlanSaved}
+              onDeletePlan={handleDeleteCurrentPlan}
+              onNewPlan={handleNewPlan}
               addToast={addToast}
             />
           }
         />
         <Route
           path="/saved"
-          element={<SavedPlansPage onLoadPlan={handleLoadPlan} addToast={addToast} />}
+          element={
+            <SavedPlansPage
+              currentPlanId={currentPlanId}
+              onLoadPlan={handleLoadPlan}
+              onPlanDeleted={handlePlanDeleted}
+              addToast={addToast}
+            />
+          }
         />
+        <Route
+          path="/my-events"
+          element={
+            <SavedPlansPage
+              currentPlanId={currentPlanId}
+              onLoadPlan={handleLoadPlan}
+              onPlanDeleted={handlePlanDeleted}
+              addToast={addToast}
+            />
+          }
+        />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
       <Footer />
       <ToastContainer toasts={toasts} removeToast={removeToast} />

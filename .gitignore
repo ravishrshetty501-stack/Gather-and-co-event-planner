@@ -23,3 +23,11 @@ Thumbs.db
 # Logs
 *.log
 npm-debug.log*
+
+# Media demo files & promotional assets
+*.mp4
+*.webm
+*.wav
+*.mp3
+linkedin_screenshots/
+

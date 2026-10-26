@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react';
 
 const LOADING_MESSAGES = [
-  'Crafting your perfect celebration...',
-  'Designing the event schedule...',
-  'Planning the menu and decorations...',
-  'Calculating the budget breakdown...',
-  'Writing your invitation message...',
-  'Preparing risk mitigation strategies...',
-  'Almost there, adding final touches...',
+  'Crafting your event concept…',
+  'Designing the schedule…',
+  'Planning the menu…',
+  'Calculating the budget…',
+  'Writing your invitation…',
+  'Preparing final details…',
+  'Almost there…',
 ];
 
 export default function LoadingPage() {
@@ -23,11 +23,11 @@ export default function LoadingPage() {
   return (
     <div className="page-container">
       <div className="loading-container">
-        <div className="spinner" style={{ width: 56, height: 56 }} />
+        <div className="spinner" style={{ width: 48, height: 48 }} />
         <p className="loading-text">{LOADING_MESSAGES[messageIndex]}</p>
         <p className="loading-subtext">
-          This usually takes 15–30 seconds. The AI is generating a comprehensive,
-          personalized event plan just for you.
+          This usually takes 15–30 seconds. We're generating a comprehensive,
+          personalized plan for your event.
         </p>
       </div>
     </div>

@@ -37,14 +37,14 @@ export function markdownToHtml(md: string): string {
   html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
 
   // Inline code
-  html = html.replace(/`([^`]+)`/g, '<code style="background:var(--purple-50);padding:2px 6px;border-radius:4px;font-size:0.88em;">$1</code>');
+  html = html.replace(/`([^`]+)`/g, '<code style="background:var(--bg-surface-warm);padding:2px 6px;border-radius:3px;font-size:0.875em;">$1</code>');
 
   // Blockquotes
-  html = html.replace(/^> (.+)$/gm, '<blockquote style="border-left:3px solid var(--purple-300);padding-left:16px;color:var(--text-secondary);margin:8px 0;">$1</blockquote>');
+  html = html.replace(/^> (.+)$/gm, '<blockquote style="border-left:3px solid var(--green-300);padding-left:16px;color:var(--text-secondary);margin:8px 0;font-style:italic;">$1</blockquote>');
 
   // Checkbox lists
   html = html.replace(/^- \[x\] (.+)$/gm, '<li style="list-style:none;margin-left:-20px;">✅ $1</li>');
-  html = html.replace(/^- \[ \] (.+)$/gm, '<li style="list-style:none;margin-left:-20px;">⬜ $1</li>');
+  html = html.replace(/^- \[ \] (.+)$/gm, '<li style="list-style:none;margin-left:-20px;">☐ $1</li>');
 
   // Unordered lists
   html = html.replace(/^- (.+)$/gm, '<li>$1</li>');
@@ -56,8 +56,14 @@ export function markdownToHtml(md: string): string {
   // Wrap consecutive <li> elements in <ul>
   html = html.replace(/((?:<li>.*<\/li>\n?)+)/g, '<ul>$1</ul>');
 
-  // Links
-  html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+  // Links (strictly sanitized to prevent javascript: or data: URI injection)
+  html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_match, text, url) => {
+    const cleanUrl = url.trim();
+    if (/^(https?:\/\/|mailto:|tel:|\/|#)/i.test(cleanUrl)) {
+      return `<a href="${cleanUrl}" target="_blank" rel="noopener noreferrer">${text}</a>`;
+    }
+    return text;
+  });
 
   // Paragraphs — wrap remaining text blocks
   const lines = html.split('\n');

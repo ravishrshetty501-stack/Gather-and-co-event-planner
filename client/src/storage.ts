@@ -5,8 +5,11 @@ const STORAGE_KEY = 'celebration-planner-saved-plans';
 export function getSavedPlans(): SavedPlan[] {
   try {
     const data = localStorage.getItem(STORAGE_KEY);
-    return data ? JSON.parse(data) : [];
-  } catch {
+    if (!data) return [];
+    const parsed = JSON.parse(data);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (err) {
+    console.error('Failed to read saved plans from storage:', err);
     return [];
   }
 }
@@ -22,25 +25,59 @@ export function savePlan(eventDetails: EventDetails, plan: EventPlan): SavedPlan
     updatedAt: now,
   };
   plans.unshift(newPlan);
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(plans));
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(plans));
+  } catch (err) {
+    console.error('Failed to save plan to storage:', err);
+  }
   return newPlan;
 }
 
-export function updateSavedPlan(id: string, plan: EventPlan): void {
+export function updateSavedPlan(
+  id: string,
+  plan: EventPlan,
+  eventDetails?: EventDetails
+): SavedPlan | null {
   const plans = getSavedPlans();
   const idx = plans.findIndex(p => p.id === id);
   if (idx !== -1) {
     plans[idx].plan = plan;
+    if (eventDetails) {
+      plans[idx].eventDetails = eventDetails;
+    }
     plans[idx].updatedAt = new Date().toISOString();
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(plans));
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(plans));
+    } catch (err) {
+      console.error('Failed to update plan in storage:', err);
+    }
+    return plans[idx];
+  }
+  return null;
+}
+
+export function deleteSavedPlan(id: string): boolean {
+  try {
+    const plans = getSavedPlans();
+    const initialLen = plans.length;
+    const updated = plans.filter(p => String(p.id).trim() !== String(id).trim());
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+    return updated.length < initialLen;
+  } catch (err) {
+    console.error('Failed to delete plan from storage:', err);
+    return false;
   }
 }
 
-export function deleteSavedPlan(id: string): void {
-  const plans = getSavedPlans().filter(p => p.id !== id);
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(plans));
+export function clearAllSavedPlans(): void {
+  try {
+    localStorage.removeItem(STORAGE_KEY);
+  } catch (err) {
+    console.error('Failed to clear saved plans from storage:', err);
+  }
 }
 
 export function getSavedPlanById(id: string): SavedPlan | undefined {
   return getSavedPlans().find(p => p.id === id);
 }
+

@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Sparkles,
@@ -12,42 +12,71 @@ import {
   RefreshCw,
   Copy,
   Save,
+  Check,
   Printer,
   ArrowLeft,
   PenLine,
+  Trash2,
   AlertTriangle,
   Users,
   MapPin,
   Calendar,
+  Layers,
+  CheckCircle2,
 } from 'lucide-react';
 import { markdownToHtml } from '../markdown';
 import { regenerateSection } from '../api';
-import { savePlan } from '../storage';
-import type { EventDetails, EventPlan, Toast } from '../types';
+import { savePlan, updateSavedPlan, getSavedPlanById } from '../storage';
+import ConfirmModal from '../components/ConfirmModal';
+import type { EventDetails, EventPlan, Toast, SavedPlan } from '../types';
 
 const ICON_MAP: Record<string, React.ReactNode> = {
-  Sparkles: <Sparkles size={18} />,
-  Clock: <Clock size={18} />,
-  IndianRupee: <IndianRupee size={18} />,
-  UtensilsCrossed: <UtensilsCrossed size={18} />,
-  Palette: <Palette size={18} />,
-  CheckSquare: <CheckSquare size={18} />,
-  Mail: <Mail size={18} />,
-  Shield: <Shield size={18} />,
+  Sparkles: <Sparkles size={16} />,
+  Clock: <Clock size={16} />,
+  IndianRupee: <IndianRupee size={16} />,
+  UtensilsCrossed: <UtensilsCrossed size={16} />,
+  Palette: <Palette size={16} />,
+  CheckSquare: <CheckSquare size={16} />,
+  Mail: <Mail size={16} />,
+  Shield: <Shield size={16} />,
 };
 
 interface Props {
   eventDetails: EventDetails | null;
   plan: EventPlan | null;
+  currentPlanId: string | null;
   isDemo: boolean;
   onUpdatePlan: (plan: EventPlan) => void;
+  onPlanSaved: (saved: SavedPlan) => void;
+  onDeletePlan: () => void;
+  onNewPlan: () => void;
   addToast: (message: string, type: Toast['type']) => void;
 }
 
-export default function ResultsPage({ eventDetails, plan, isDemo, onUpdatePlan, addToast }: Props) {
+export default function ResultsPage({
+  eventDetails,
+  plan,
+  currentPlanId,
+  isDemo,
+  onUpdatePlan,
+  onPlanSaved,
+  onDeletePlan,
+  onNewPlan,
+  addToast,
+}: Props) {
   const navigate = useNavigate();
   const printRef = useRef<HTMLDivElement>(null);
   const [regeneratingKey, setRegeneratingKey] = useState<string | null>(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [isSaved, setIsSaved] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (currentPlanId && getSavedPlanById(currentPlanId)) {
+      setIsSaved(true);
+    } else {
+      setIsSaved(false);
+    }
+  }, [currentPlanId]);
 
   const handleRegenerate = useCallback(async (sectionKey: string) => {
     if (!eventDetails || !plan) return;
@@ -64,7 +93,7 @@ export default function ResultsPage({ eventDetails, plan, isDemo, onUpdatePlan, 
       );
       const updated = { ...plan, [sectionKey]: { ...section, content } };
       onUpdatePlan(updated);
-      addToast(`${section.title} regenerated successfully!`, 'success');
+      addToast(`${section.title} refreshed successfully!`, 'success');
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Failed to regenerate section';
       addToast(message, 'error');
@@ -75,7 +104,6 @@ export default function ResultsPage({ eventDetails, plan, isDemo, onUpdatePlan, 
 
   const handleCopyInvitation = useCallback(() => {
     if (!plan?.invitation?.content) return;
-    // Strip markdown formatting for plain text copy
     const plainText = plan.invitation.content
       .replace(/#{1,4}\s/g, '')
       .replace(/\*\*(.+?)\*\*/g, '$1')
@@ -83,7 +111,7 @@ export default function ResultsPage({ eventDetails, plan, isDemo, onUpdatePlan, 
       .replace(/---+/g, '─────────────')
       .trim();
     navigator.clipboard.writeText(plainText).then(() => {
-      addToast('Invitation copied to clipboard!', 'success');
+      addToast('Invitation text copied to clipboard!', 'success');
     }).catch(() => {
       addToast('Failed to copy. Please select and copy manually.', 'warning');
     });
@@ -91,96 +119,201 @@ export default function ResultsPage({ eventDetails, plan, isDemo, onUpdatePlan, 
 
   const handleSave = useCallback(() => {
     if (!eventDetails || !plan) return;
-    savePlan(eventDetails, plan);
-    addToast('Event plan saved successfully!', 'success');
-  }, [eventDetails, plan, addToast]);
+
+    if (currentPlanId && getSavedPlanById(currentPlanId)) {
+      const updated = updateSavedPlan(currentPlanId, plan, eventDetails);
+      if (updated) {
+        onPlanSaved(updated);
+        setIsSaved(true);
+        addToast('Saved plan updated successfully!', 'success');
+      }
+    } else {
+      const saved = savePlan(eventDetails, plan);
+      onPlanSaved(saved);
+      setIsSaved(true);
+      addToast('Event plan saved to My Events!', 'success');
+    }
+  }, [eventDetails, plan, currentPlanId, onPlanSaved, addToast]);
 
   const handlePrint = useCallback(() => {
     window.print();
   }, []);
 
+  const handleConfirmDelete = () => {
+    setShowDeleteModal(false);
+    onDeletePlan();
+  };
+
   if (!plan || !eventDetails) {
     return (
       <div className="page-container">
         <div className="empty-state">
-          <div className="empty-icon">📋</div>
-          <h3>No Event Plan Yet</h3>
-          <p>Create a new event plan or load a saved one to see results here.</p>
-          <button className="btn btn-primary" onClick={() => navigate('/create')}>
-            <Sparkles size={18} /> Create Event Plan
+          <div className="empty-icon">
+            <Calendar size={24} />
+          </div>
+          <h3>No event plan active</h3>
+          <p>Create a new celebration plan or select one from your saved events.</p>
+          <button className="btn btn-primary" onClick={onNewPlan}>
+            Create Event Plan
           </button>
         </div>
       </div>
     );
   }
 
+  const perGuest = Math.round(eventDetails.budget / (eventDetails.guestCount || 1));
   const sectionKeys = Object.keys(plan);
 
   return (
-    <div className="page-container" ref={printRef}>
-      {/* Header */}
-      <div className="results-header">
+    <div className="page-container producer-workspace" ref={printRef}>
+      {/* ── Producer Workspace Hero Header ── */}
+      <div className="results-header-card">
         {isDemo && (
-          <div className="estimate-banner" style={{ justifyContent: 'center', marginBottom: 'var(--space-md)' }}>
-            <Sparkles size={18} />
+          <div className="demo-banner">
+            <Sparkles size={16} />
             <span>
-              <strong>Demo Plan</strong> — This is a sample plan for demonstration purposes.
-              Create your own event to get a personalized AI-generated plan.
+              <strong>Sample Plan Demonstration</strong> — This showcases how a complete plan is generated and formatted.
             </span>
           </div>
         )}
-        <h1>{eventDetails.eventName}</h1>
-        <div className="results-meta">
-          {eventDetails.eventType && (
-            <span className="results-meta-item">
-              <Sparkles size={16} /> {eventDetails.eventType}
+
+        <div className="workspace-eyebrow-row">
+          <span className="workspace-badge">
+            <Layers size={13} />
+            Producer Workspace
+          </span>
+          {isSaved && (
+            <span className="saved-status-pill">
+              <CheckCircle2 size={13} />
+              Saved in My Events
             </span>
+          )}
+        </div>
+
+        <h1 className="results-event-title">{eventDetails.eventName}</h1>
+
+        <div className="results-meta-grid">
+          {eventDetails.eventType && (
+            <div className="meta-card">
+              <span className="meta-label">Occasion</span>
+              <span className="meta-value">
+                <Sparkles size={14} /> {eventDetails.eventType}
+              </span>
+            </div>
           )}
           {eventDetails.date && (
-            <span className="results-meta-item">
-              <Calendar size={16} /> {new Date(eventDetails.date).toLocaleDateString('en-IN', { dateStyle: 'long' })}
-            </span>
+            <div className="meta-card">
+              <span className="meta-label">Event Date</span>
+              <span className="meta-value">
+                <Calendar size={14} />
+                {new Date(eventDetails.date).toLocaleDateString('en-IN', {
+                  dateStyle: 'medium',
+                })}
+              </span>
+            </div>
           )}
           {eventDetails.city && (
-            <span className="results-meta-item">
-              <MapPin size={16} /> {eventDetails.city}
-            </span>
+            <div className="meta-card">
+              <span className="meta-label">Location</span>
+              <span className="meta-value">
+                <MapPin size={14} /> {eventDetails.city}
+              </span>
+            </div>
           )}
-          <span className="results-meta-item">
-            <Users size={16} /> {eventDetails.guestCount} guests
-          </span>
-          <span className="results-meta-item">
-            <IndianRupee size={16} /> ₹{eventDetails.budget.toLocaleString('en-IN')}
+          <div className="meta-card">
+            <span className="meta-label">Guest Count</span>
+            <span className="meta-value">
+              <Users size={14} /> {eventDetails.guestCount} guests
+            </span>
+          </div>
+          <div className="meta-card meta-card-budget">
+            <span className="meta-label">Target Budget</span>
+            <span className="meta-value">
+              <IndianRupee size={14} /> ₹{eventDetails.budget.toLocaleString('en-IN')}
+              <small className="meta-sub">~₹{perGuest.toLocaleString('en-IN')}/guest</small>
+            </span>
+          </div>
+        </div>
+
+        {/* Action Bar */}
+        <div className="results-actions-bar">
+          <div className="results-actions-primary">
+            <button className="btn btn-ghost btn-sm" onClick={onNewPlan} title="Start a brand new plan">
+              <ArrowLeft size={14} /> New Plan
+            </button>
+            <button
+              className={`btn btn-sm ${isSaved ? 'btn-primary' : 'btn-secondary'}`}
+              onClick={handleSave}
+              title={isSaved ? 'Update saved event plan' : 'Save event plan to My Events'}
+            >
+              {isSaved ? <Check size={14} /> : <Save size={14} />}
+              {isSaved ? 'Saved to My Events' : 'Save Plan'}
+            </button>
+            <button className="btn btn-secondary btn-sm" onClick={handlePrint} title="Print this event plan">
+              <Printer size={14} /> Print Dossier
+            </button>
+            <button
+              className="btn btn-secondary btn-sm"
+              onClick={() => navigate('/create')}
+              title="Edit event parameters and regenerate"
+            >
+              <PenLine size={14} /> Edit &amp; Refine
+            </button>
+          </div>
+
+          {!isDemo && (
+            <button
+              className="btn btn-danger-ghost btn-sm"
+              onClick={() => setShowDeleteModal(true)}
+              title="Delete this event"
+              aria-label="Delete this event"
+            >
+              <Trash2 size={14} /> Delete
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* ── Budget Summary Visualizer Strip ── */}
+      <div className="budget-visual-strip card">
+        <div className="budget-strip-header">
+          <div className="budget-strip-title">
+            <IndianRupee size={16} />
+            <span>Budget Allocation Breakdown</span>
+          </div>
+          <span className="budget-strip-total">
+            Total Cap: <strong>₹{eventDetails.budget.toLocaleString('en-IN')}</strong>
           </span>
         </div>
 
-        <div className="results-actions">
-          <button className="btn btn-ghost btn-sm" onClick={() => navigate('/create')}>
-            <ArrowLeft size={16} /> New Plan
-          </button>
-          <button className="btn btn-secondary btn-sm" onClick={handleSave}>
-            <Save size={16} /> Save Plan
-          </button>
-          <button className="btn btn-secondary btn-sm" onClick={handlePrint}>
-            <Printer size={16} /> Print
-          </button>
-          <button className="btn btn-secondary btn-sm" onClick={() => navigate('/create')}>
-            <PenLine size={16} /> Edit & Regenerate
-          </button>
+        <div className="budget-bar-track" aria-label="Visual budget breakdown">
+          <div className="budget-bar-segment seg-catering" style={{ width: '42%' }} title="Catering ~42%" />
+          <div className="budget-bar-segment seg-venue" style={{ width: '22%' }} title="Venue & Setup ~22%" />
+          <div className="budget-bar-segment seg-decor" style={{ width: '16%' }} title="Decor & Florals ~16%" />
+          <div className="budget-bar-segment seg-sound" style={{ width: '8%' }} title="Entertainment ~8%" />
+          <div className="budget-bar-segment seg-photo" style={{ width: '7%' }} title="Photography ~7%" />
+          <div className="budget-bar-segment seg-buffer" style={{ width: '5%' }} title="Contingency Buffer ~5%" />
+        </div>
+
+        <div className="budget-legend">
+          <span className="legend-item"><span className="legend-dot seg-catering" /> Catering (42%)</span>
+          <span className="legend-item"><span className="legend-dot seg-venue" /> Venue (22%)</span>
+          <span className="legend-item"><span className="legend-dot seg-decor" /> Decor (16%)</span>
+          <span className="legend-item"><span className="legend-dot seg-sound" /> Entertainment (8%)</span>
+          <span className="legend-item"><span className="legend-dot seg-photo" /> Photography (7%)</span>
+          <span className="legend-item"><span className="legend-dot seg-buffer" /> Buffer (5%)</span>
         </div>
       </div>
 
       {/* Estimate Disclaimer */}
       <div className="estimate-banner">
-        <AlertTriangle size={18} style={{ flexShrink: 0, marginTop: 2 }} />
+        <AlertTriangle size={15} style={{ flexShrink: 0, marginTop: 1 }} />
         <span>
-          <strong>Estimated prices only.</strong> All costs shown are AI-generated estimates based
-          on typical market rates. They are not verified quotes. We recommend getting
-          actual quotes from vendors before committing.
+          <strong>Market Rate Estimates:</strong> Figures and pricing are advisory projections based on prevailing metropolitan rates in India. We recommend securing at least two vendor quotes before final commitments.
         </span>
       </div>
 
-      {/* Sections */}
+      {/* ── Content Sections with Tailored Layouts ── */}
       <div className="results-sections">
         {sectionKeys.map(key => {
           const section = plan[key];
@@ -189,22 +322,30 @@ export default function ResultsPage({ eventDetails, plan, isDemo, onUpdatePlan, 
           const isInvitation = key === 'invitation';
 
           return (
-            <div key={key} className="card section-card" id={`section-${key}`}>
+            <div
+              key={key}
+              className={`card section-card section-type-${key}`}
+              id={`section-${key}`}
+            >
               <div className="section-header">
                 <div className="section-title">
-                  <div className="section-icon">
-                    {ICON_MAP[section.icon] || <Sparkles size={18} />}
+                  <div className={`section-icon icon-type-${key}`}>
+                    {ICON_MAP[section.icon] || <Sparkles size={16} />}
                   </div>
-                  {section.title}
+                  <div>
+                    <h2>{section.title}</h2>
+                    <span className="section-type-tag">{key.toUpperCase()}</span>
+                  </div>
                 </div>
+
                 <div className="section-actions">
                   {isInvitation && (
                     <button
-                      className="btn btn-ghost btn-sm"
+                      className="btn btn-secondary btn-sm"
                       onClick={handleCopyInvitation}
                       title="Copy invitation text"
                     >
-                      <Copy size={15} /> Copy
+                      <Copy size={13} /> Copy Invitation
                     </button>
                   )}
                   {!isDemo && (
@@ -214,20 +355,33 @@ export default function ResultsPage({ eventDetails, plan, isDemo, onUpdatePlan, 
                       disabled={isRegenerating || regeneratingKey !== null}
                       title="Regenerate this section"
                     >
-                      <RefreshCw size={15} className={isRegenerating ? 'spinning' : ''} />
-                      {isRegenerating ? 'Regenerating...' : 'Regenerate'}
+                      <RefreshCw size={13} className={isRegenerating ? 'spinning' : ''} />
+                      {isRegenerating ? 'Refining…' : 'Refine'}
                     </button>
                   )}
                 </div>
               </div>
+
               <div
-                className="section-content"
+                className={`section-content content-styled-${key}`}
                 dangerouslySetInnerHTML={{ __html: markdownToHtml(section.content) }}
               />
             </div>
           );
         })}
       </div>
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmModal
+        isOpen={showDeleteModal}
+        title="Delete Event Plan?"
+        message={`Are you sure you want to delete "${eventDetails.eventName}"? This cannot be undone.`}
+        confirmLabel="Delete Event"
+        cancelLabel="Keep Event"
+        isDanger={true}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setShowDeleteModal(false)}
+      />
     </div>
   );
 }
