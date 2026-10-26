@@ -5,11 +5,14 @@
 
 ---
 
-## 🌟 Demo & Deployment
+## 🌟 Demo, Deployment & Social Links
 
-- 🌐 **Public Live Deployment:** `[PLACEHOLDER: Add your deployment URL here, e.g. https://gather-and-co.vercel.app]`
-- 🎥 **Product Demonstration Video (3 min):** `[PLACEHOLDER: Add public video link here, e.g. https://youtu.be/your-demo-id]`
-- 📱 **Official Instagram Reel (38s):** `[PLACEHOLDER: Add Instagram / Reel link here]`
+- 🌐 **Public Live Deployment:** [https://gather-and-co-event-planner.vercel.app/](https://gather-and-co-event-planner.vercel.app/)
+- ⚙️ **Backend API:** [https://gather-and-co-event-planner.onrender.com/](https://gather-and-co-event-planner.onrender.com/)
+- 🎥 **Product Demonstration Video (3 min, Unlisted):** [https://youtu.be/IPyspV5RsWs](https://youtu.be/IPyspV5RsWs)
+- 📱 **Official Instagram Reel:** [https://www.instagram.com/reel/De9c0pcAe4B/](https://www.instagram.com/reel/De9c0pcAe4B/)
+- 💼 **LinkedIn Project Post:** [https://www.linkedin.com/posts/ravish-r-shetty-bb98b5390_buildwithai-promptwarsvirtual-challenge5-ugcPost-7520483218631004161-kO3j/](https://www.linkedin.com/posts/ravish-r-shetty-bb98b5390_buildwithai-promptwarsvirtual-challenge5-ugcPost-7520483218631004161-kO3j/)
+- 💻 **GitHub Repository:** [https://github.com/ravishrshetty501-stack/Gather-and-co-event-planner](https://github.com/ravishrshetty501-stack/Gather-and-co-event-planner)
 
 ---
 
@@ -119,8 +122,8 @@ The planner adapts every recommendation directly to the user's inputs:
 
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/your-username/celebration-and-event-planner.git
-   cd celebration-and-event-planner
+   git clone https://github.com/ravishrshetty501-stack/Gather-and-co-event-planner.git
+   cd Gather-and-co-event-planner
    ```
 
 2. **Install all dependencies:**
