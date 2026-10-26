@@ -3,6 +3,8 @@ const assert = require('node:assert');
 const http = require('node:http');
 const {
   app,
+  sanitizeString,
+  callWithTimeout,
   buildPrompt,
   parseGeneratedPlan,
   generateSmartFallbackPlan,
@@ -290,4 +292,58 @@ test('POST /api/regenerate-section rejects requests missing sectionKey or eventD
   });
   assert.strictEqual(res.status, 400);
   assert.ok(res.data.error);
+});
+
+// -------------------------------------------------------------
+// 6. Security, Resilience & Boundary Tests
+// -------------------------------------------------------------
+test('sanitizeString utility trims and enforces character boundaries safely', () => {
+  assert.strictEqual(sanitizeString('  hello world  ', 10), 'hello worl');
+  assert.strictEqual(sanitizeString(12345, 10), '');
+  assert.strictEqual(sanitizeString(null, 10), '');
+  assert.strictEqual(sanitizeString(undefined, 10), '');
+});
+
+test('callWithTimeout resolves when completed in time and rejects on timeout', async () => {
+  // Fast operation
+  const fast = new Promise(resolve => setTimeout(() => resolve('done'), 20));
+  const result = await callWithTimeout(fast, 100);
+  assert.strictEqual(result, 'done');
+
+  // Slow operation exceeding timeout
+  const slow = new Promise(resolve => setTimeout(() => resolve('too-late'), 150));
+  await assert.rejects(
+    async () => {
+      await callWithTimeout(slow, 30);
+    },
+    /Operation timed out/
+  );
+});
+
+test('POST /api/generate-plan rejects budget exceeding maximum cap', async () => {
+  const res = await postJson('/api/generate-plan', {
+    eventType: 'Wedding',
+    eventName: 'Royal Celebration',
+    guestCount: 500,
+    budget: 2000000000, // Exceeds ₹100 Cr cap
+  });
+  assert.strictEqual(res.status, 400);
+  assert.ok(res.data.error.includes('Budget'));
+});
+
+test('POST /api/generate-plan safely sanitizes event input and avoids crashing on HTML payloads', async () => {
+  const res = await postJson('/api/generate-plan', {
+    eventType: '<script>alert("XSS")</script> Birthday',
+    eventName: '<b>Aarav Celebration</b>',
+    guestCount: 25,
+    budget: 25000,
+  });
+  assert.strictEqual(res.status, 200);
+  assert.ok(res.data.plan);
+});
+
+test('GET /api/nonexistent-route returns 404 with safe JSON format', async () => {
+  const res = await getJson('/api/nonexistent-endpoint');
+  assert.strictEqual(res.status, 404);
+  assert.strictEqual(res.data.error, 'API route not found');
 });

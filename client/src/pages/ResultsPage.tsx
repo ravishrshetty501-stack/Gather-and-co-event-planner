@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
+import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Sparkles,
@@ -29,6 +29,7 @@ import { regenerateSection } from '../api';
 import { savePlan, updateSavedPlan, getSavedPlanById } from '../storage';
 import ConfirmModal from '../components/ConfirmModal';
 import type { EventDetails, EventPlan, Toast, SavedPlan } from '../types';
+import { formatINR, formatDateINR, calculatePerGuest } from '../utils/formatters';
 
 const ICON_MAP: Record<string, React.ReactNode> = {
   Sparkles: <Sparkles size={16} />,
@@ -40,6 +41,80 @@ const ICON_MAP: Record<string, React.ReactNode> = {
   Mail: <Mail size={16} />,
   Shield: <Shield size={16} />,
 };
+
+interface PlanSectionCardProps {
+  sectionKey: string;
+  title: string;
+  content: string;
+  icon: string;
+  isRegenerating: boolean;
+  canRegenerate: boolean;
+  isDemo: boolean;
+  onRegenerate: (key: string) => void;
+  onCopyInvitation?: () => void;
+}
+
+const PlanSectionCard = React.memo(function PlanSectionCard({
+  sectionKey,
+  title,
+  content,
+  icon,
+  isRegenerating,
+  canRegenerate,
+  isDemo,
+  onRegenerate,
+  onCopyInvitation,
+}: PlanSectionCardProps) {
+  const isInvitation = sectionKey === 'invitation';
+  const htmlContent = useMemo(() => markdownToHtml(content), [content]);
+
+  return (
+    <div
+      className={`card section-card section-type-${sectionKey}`}
+      id={`section-${sectionKey}`}
+    >
+      <div className="section-header">
+        <div className="section-title">
+          <div className={`section-icon icon-type-${sectionKey}`}>
+            {ICON_MAP[icon] || <Sparkles size={16} />}
+          </div>
+          <div>
+            <h2>{title}</h2>
+            <span className="section-type-tag">{sectionKey.toUpperCase()}</span>
+          </div>
+        </div>
+
+        <div className="section-actions">
+          {isInvitation && onCopyInvitation && (
+            <button
+              className="btn btn-secondary btn-sm"
+              onClick={onCopyInvitation}
+              title="Copy invitation text"
+            >
+              <Copy size={13} /> Copy Invitation
+            </button>
+          )}
+          {!isDemo && (
+            <button
+              className="btn btn-ghost btn-sm"
+              onClick={() => onRegenerate(sectionKey)}
+              disabled={!canRegenerate || isRegenerating}
+              title="Regenerate this section"
+            >
+              <RefreshCw size={13} className={isRegenerating ? 'spinning' : ''} />
+              {isRegenerating ? 'Refining…' : 'Refine'}
+            </button>
+          )}
+        </div>
+      </div>
+
+      <div
+        className={`section-content content-styled-${sectionKey}`}
+        dangerouslySetInnerHTML={{ __html: htmlContent }}
+      />
+    </div>
+  );
+});
 
 interface Props {
   eventDetails: EventDetails | null;
@@ -161,8 +236,11 @@ export default function ResultsPage({
     );
   }
 
-  const perGuest = Math.round(eventDetails.budget / (eventDetails.guestCount || 1));
-  const sectionKeys = Object.keys(plan);
+  const perGuest = useMemo(
+    () => calculatePerGuest(eventDetails.budget, eventDetails.guestCount),
+    [eventDetails.budget, eventDetails.guestCount]
+  );
+  const sectionKeys = useMemo(() => Object.keys(plan), [plan]);
 
   return (
     <div className="page-container producer-workspace" ref={printRef}>
@@ -206,9 +284,7 @@ export default function ResultsPage({
               <span className="meta-label">Event Date</span>
               <span className="meta-value">
                 <Calendar size={14} />
-                {new Date(eventDetails.date).toLocaleDateString('en-IN', {
-                  dateStyle: 'medium',
-                })}
+                {formatDateINR(eventDetails.date)}
               </span>
             </div>
           )}
@@ -229,8 +305,8 @@ export default function ResultsPage({
           <div className="meta-card meta-card-budget">
             <span className="meta-label">Target Budget</span>
             <span className="meta-value">
-              <IndianRupee size={14} /> ₹{eventDetails.budget.toLocaleString('en-IN')}
-              <small className="meta-sub">~₹{perGuest.toLocaleString('en-IN')}/guest</small>
+              <IndianRupee size={14} /> {formatINR(eventDetails.budget)}
+              <small className="meta-sub">~{formatINR(perGuest)}/guest</small>
             </span>
           </div>
         </div>
@@ -282,7 +358,7 @@ export default function ResultsPage({
             <span>Budget Allocation Breakdown</span>
           </div>
           <span className="budget-strip-total">
-            Total Cap: <strong>₹{eventDetails.budget.toLocaleString('en-IN')}</strong>
+            Total Cap: <strong>{formatINR(eventDetails.budget)}</strong>
           </span>
         </div>
 
@@ -318,55 +394,20 @@ export default function ResultsPage({
         {sectionKeys.map(key => {
           const section = plan[key];
           if (!section || !section.content) return null;
-          const isRegenerating = regeneratingKey === key;
-          const isInvitation = key === 'invitation';
 
           return (
-            <div
+            <PlanSectionCard
               key={key}
-              className={`card section-card section-type-${key}`}
-              id={`section-${key}`}
-            >
-              <div className="section-header">
-                <div className="section-title">
-                  <div className={`section-icon icon-type-${key}`}>
-                    {ICON_MAP[section.icon] || <Sparkles size={16} />}
-                  </div>
-                  <div>
-                    <h2>{section.title}</h2>
-                    <span className="section-type-tag">{key.toUpperCase()}</span>
-                  </div>
-                </div>
-
-                <div className="section-actions">
-                  {isInvitation && (
-                    <button
-                      className="btn btn-secondary btn-sm"
-                      onClick={handleCopyInvitation}
-                      title="Copy invitation text"
-                    >
-                      <Copy size={13} /> Copy Invitation
-                    </button>
-                  )}
-                  {!isDemo && (
-                    <button
-                      className="btn btn-ghost btn-sm"
-                      onClick={() => handleRegenerate(key)}
-                      disabled={isRegenerating || regeneratingKey !== null}
-                      title="Regenerate this section"
-                    >
-                      <RefreshCw size={13} className={isRegenerating ? 'spinning' : ''} />
-                      {isRegenerating ? 'Refining…' : 'Refine'}
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              <div
-                className={`section-content content-styled-${key}`}
-                dangerouslySetInnerHTML={{ __html: markdownToHtml(section.content) }}
-              />
-            </div>
+              sectionKey={key}
+              title={section.title}
+              content={section.content}
+              icon={section.icon}
+              isRegenerating={regeneratingKey === key}
+              canRegenerate={regeneratingKey === null}
+              isDemo={isDemo}
+              onRegenerate={handleRegenerate}
+              onCopyInvitation={key === 'invitation' ? handleCopyInvitation : undefined}
+            />
           );
         })}
       </div>

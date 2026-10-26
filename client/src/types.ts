@@ -13,15 +13,23 @@ export interface EventDetails {
   additionalInstructions: string;
 }
 
+export type PlanSectionKey =
+  | 'concept'
+  | 'schedule'
+  | 'budget'
+  | 'menu'
+  | 'decorations'
+  | 'checklist'
+  | 'invitation'
+  | 'risks';
+
 export interface PlanSection {
   title: string;
   content: string;
   icon: string;
 }
 
-export interface EventPlan {
-  [key: string]: PlanSection;
-}
+export type EventPlan = Record<PlanSectionKey | string, PlanSection>;
 
 export interface GenerateResponse {
   plan: EventPlan;

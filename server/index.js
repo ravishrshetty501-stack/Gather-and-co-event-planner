@@ -40,6 +40,23 @@ app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', geminiConfigured: hasKey });
 });
 
+// Utility to sanitize, trim, and length-limit user string inputs
+function sanitizeString(str, maxLength = 200) {
+  if (typeof str !== 'string') return '';
+  return str.trim().slice(0, maxLength);
+}
+
+// Timeout wrapper for external AI API calls to guarantee response SLA
+const DEFAULT_GEMINI_TIMEOUT_MS = 15000;
+function callWithTimeout(promise, timeoutMs = DEFAULT_GEMINI_TIMEOUT_MS) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) =>
+      setTimeout(() => reject(new Error(`Operation timed out after ${timeoutMs}ms`)), timeoutMs)
+    ),
+  ]);
+}
+
 // Generate event plan
 app.post('/api/generate-plan', async (req, res) => {
   const {
@@ -55,10 +72,13 @@ app.post('/api/generate-plan', async (req, res) => {
     dietaryRequirements,
     accessibilityRequirements,
     additionalInstructions,
-  } = req.body;
+  } = req.body || {};
+
+  const cleanEventType = sanitizeString(eventType, 60);
+  const cleanEventName = sanitizeString(eventName, 120);
 
   // Validate required fields
-  if (!eventType || !eventName || guestCount === undefined || budget === undefined) {
+  if (!cleanEventType || !cleanEventName || guestCount === undefined || budget === undefined) {
     return res.status(400).json({
       error: 'Missing required fields: eventType, eventName, guestCount, and budget are required.',
     });
@@ -75,19 +95,23 @@ app.post('/api/generate-plan', async (req, res) => {
     return res.status(400).json({ error: 'Budget must be at least ₹1,000.' });
   }
 
+  if (numBudget > 1000000000) {
+    return res.status(400).json({ error: 'Budget cannot exceed ₹100,00,00,000 (100 Crore).' });
+  }
+
   const details = {
-    eventType,
-    eventName,
-    date,
-    time,
-    city,
+    eventType: cleanEventType,
+    eventName: cleanEventName,
+    date: sanitizeString(date, 50),
+    time: sanitizeString(time, 50),
+    city: sanitizeString(city, 100),
     guestCount: numGuests,
     budget: numBudget,
-    theme,
-    foodPreferences,
-    dietaryRequirements,
-    accessibilityRequirements,
-    additionalInstructions,
+    theme: sanitizeString(theme, 120),
+    foodPreferences: sanitizeString(foodPreferences, 100),
+    dietaryRequirements: sanitizeString(dietaryRequirements, 200),
+    accessibilityRequirements: sanitizeString(accessibilityRequirements, 200),
+    additionalInstructions: sanitizeString(additionalInstructions, 500),
   };
 
   const apiKey = process.env.GEMINI_API_KEY;
@@ -100,7 +124,7 @@ app.post('/api/generate-plan', async (req, res) => {
       const model = genAI.getGenerativeModel({ model: modelName });
 
       const prompt = buildPrompt(details);
-      const result = await model.generateContent(prompt);
+      const result = await callWithTimeout(model.generateContent(prompt), 15000);
       const text = result.response.text();
       const plan = parseGeneratedPlan(text);
 
@@ -118,10 +142,13 @@ app.post('/api/generate-plan', async (req, res) => {
 
 // Regenerate a single section
 app.post('/api/regenerate-section', async (req, res) => {
-  const { sectionKey, sectionTitle, eventDetails, currentContent } = req.body;
+  const { sectionKey, sectionTitle, eventDetails, currentContent } = req.body || {};
 
-  if (!sectionKey || !sectionTitle || !eventDetails) {
-    return res.status(400).json({ error: 'Missing required fields.' });
+  const cleanSectionKey = sanitizeString(sectionKey, 50);
+  const cleanSectionTitle = sanitizeString(sectionTitle, 80);
+
+  if (!cleanSectionKey || !cleanSectionTitle || !eventDetails || typeof eventDetails !== 'object') {
+    return res.status(400).json({ error: 'Missing required fields: sectionKey, sectionTitle, and eventDetails.' });
   }
 
   const apiKey = process.env.GEMINI_API_KEY;
@@ -133,7 +160,7 @@ app.post('/api/regenerate-section', async (req, res) => {
       const modelName = process.env.GEMINI_MODEL || 'gemini-1.5-flash';
       const model = genAI.getGenerativeModel({ model: modelName });
 
-      const prompt = `You are an expert event planner in India. Regenerate ONLY the "${sectionTitle}" section for the following event.
+      const prompt = `You are an expert event planner in India. Regenerate ONLY the "${cleanSectionTitle}" section for the following event.
 
 Event Details:
 - Type: ${eventDetails.eventType}
@@ -156,7 +183,7 @@ Please provide a fresh, creative, and detailed version of this section. Use Indi
 
 Return ONLY the content for this section, formatted with markdown headings, bullet points, and clear structure. Do not include the section title itself as a heading.`;
 
-      const result = await model.generateContent(prompt);
+      const result = await callWithTimeout(model.generateContent(prompt), 14000);
       const text = result.response.text();
 
       return res.json({ content: text });
@@ -165,7 +192,7 @@ Return ONLY the content for this section, formatted with markdown headings, bull
     }
   }
 
-  const freshContent = regenerateSmartSection(sectionKey, eventDetails);
+  const freshContent = regenerateSmartSection(cleanSectionKey, eventDetails);
   return res.json({ content: freshContent });
 });
 
@@ -536,6 +563,17 @@ function regenerateSmartSection(sectionKey, eventDetails) {
   }
 }
 
+// 404 handler for unmatched API routes
+app.use('/api', (_req, res) => {
+  res.status(404).json({ error: 'API route not found' });
+});
+
+// Centralized error handler to prevent internal trace leakage
+app.use((err, _req, res, _next) => {
+  console.error('Unhandled server error:', err);
+  res.status(500).json({ error: 'Internal server error. Please try again later.' });
+});
+
 if (require.main === module) {
   app.listen(PORT, () => {
     console.log(`✨ Celebration & Event Planner API running on port ${PORT}`);
@@ -549,8 +587,11 @@ if (require.main === module) {
 
 module.exports = {
   app,
+  sanitizeString,
+  callWithTimeout,
   buildPrompt,
   parseGeneratedPlan,
   generateSmartFallbackPlan,
   regenerateSmartSection,
 };
+

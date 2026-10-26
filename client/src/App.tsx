@@ -1,16 +1,29 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, useNavigate, Navigate } from 'react-router-dom';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import ToastContainer from './components/ToastContainer';
 import HomePage from './pages/HomePage';
-import CreateEventPage from './pages/CreateEventPage';
-import ResultsPage from './pages/ResultsPage';
-import SavedPlansPage from './pages/SavedPlansPage';
-import LoadingPage from './pages/LoadingPage';
 import { generatePlan } from './api';
 import { deleteSavedPlan } from './storage';
 import type { EventDetails, EventPlan, Toast, SavedPlan } from './types';
+
+// Route-based code splitting for improved initial bundle performance
+const CreateEventPage = lazy(() => import('./pages/CreateEventPage'));
+const ResultsPage = lazy(() => import('./pages/ResultsPage'));
+const SavedPlansPage = lazy(() => import('./pages/SavedPlansPage'));
+const LoadingPage = lazy(() => import('./pages/LoadingPage'));
+
+function RouteLoadingFallback() {
+  return (
+    <div className="page-container" role="status" aria-live="polite">
+      <div className="loading-container" style={{ minHeight: '50vh' }}>
+        <div className="spinner" aria-hidden="true" />
+        <p className="loading-subtext">Loading workspace…</p>
+      </div>
+    </div>
+  );
+}
 
 function AppRoutes() {
   const navigate = useNavigate();
@@ -114,60 +127,62 @@ function AppRoutes() {
   return (
     <>
       <Header />
-      <Routes>
-        <Route path="/" element={<HomePage onLoadDemo={handleLoadDemo} />} />
-        <Route
-          path="/create"
-          element={
-            <CreateEventPage
-              initialDetails={eventDetails}
-              onSubmit={handleFormSubmit}
-              isLoading={isLoading}
-              onClearPlan={handleClearPlan}
-            />
-          }
-        />
-        <Route path="/loading" element={<LoadingPage />} />
-        <Route
-          path="/results"
-          element={
-            <ResultsPage
-              eventDetails={eventDetails}
-              plan={plan}
-              currentPlanId={currentPlanId}
-              isDemo={isDemo}
-              onUpdatePlan={handleUpdatePlan}
-              onPlanSaved={handlePlanSaved}
-              onDeletePlan={handleDeleteCurrentPlan}
-              onNewPlan={handleNewPlan}
-              addToast={addToast}
-            />
-          }
-        />
-        <Route
-          path="/saved"
-          element={
-            <SavedPlansPage
-              currentPlanId={currentPlanId}
-              onLoadPlan={handleLoadPlan}
-              onPlanDeleted={handlePlanDeleted}
-              addToast={addToast}
-            />
-          }
-        />
-        <Route
-          path="/my-events"
-          element={
-            <SavedPlansPage
-              currentPlanId={currentPlanId}
-              onLoadPlan={handleLoadPlan}
-              onPlanDeleted={handlePlanDeleted}
-              addToast={addToast}
-            />
-          }
-        />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+      <Suspense fallback={<RouteLoadingFallback />}>
+        <Routes>
+          <Route path="/" element={<HomePage onLoadDemo={handleLoadDemo} />} />
+          <Route
+            path="/create"
+            element={
+              <CreateEventPage
+                initialDetails={eventDetails}
+                onSubmit={handleFormSubmit}
+                isLoading={isLoading}
+                onClearPlan={handleClearPlan}
+              />
+            }
+          />
+          <Route path="/loading" element={<LoadingPage />} />
+          <Route
+            path="/results"
+            element={
+              <ResultsPage
+                eventDetails={eventDetails}
+                plan={plan}
+                currentPlanId={currentPlanId}
+                isDemo={isDemo}
+                onUpdatePlan={handleUpdatePlan}
+                onPlanSaved={handlePlanSaved}
+                onDeletePlan={handleDeleteCurrentPlan}
+                onNewPlan={handleNewPlan}
+                addToast={addToast}
+              />
+            }
+          />
+          <Route
+            path="/saved"
+            element={
+              <SavedPlansPage
+                currentPlanId={currentPlanId}
+                onLoadPlan={handleLoadPlan}
+                onPlanDeleted={handlePlanDeleted}
+                addToast={addToast}
+              />
+            }
+          />
+          <Route
+            path="/my-events"
+            element={
+              <SavedPlansPage
+                currentPlanId={currentPlanId}
+                onLoadPlan={handleLoadPlan}
+                onPlanDeleted={handlePlanDeleted}
+                addToast={addToast}
+              />
+            }
+          />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </Suspense>
       <Footer />
       <ToastContainer toasts={toasts} removeToast={removeToast} />
     </>

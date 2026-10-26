@@ -41,13 +41,20 @@ test('markdownToHtml sanitizes dangerous HTML and prevents script injection', ()
 test('markdownToHtml sanitizes malicious link protocols', () => {
   const safeLink = '[Google](https://google.com)';
   const evilLink = '[Click Me](javascript:alert("hacked"))';
+  const dataLink = '[Payload](data:text/html,<script>alert(1)</script>)';
+  const vbLink = '[VB](vbscript:msgbox(1))';
 
   const safeHtml = markdownToHtml(safeLink);
   const evilHtml = markdownToHtml(evilLink);
+  const dataHtml = markdownToHtml(dataLink);
+  const vbHtml = markdownToHtml(vbLink);
 
   assert.ok(safeHtml.includes('<a href="https://google.com"'));
   assert.ok(!evilHtml.includes('href="javascript:'));
+  assert.ok(!dataHtml.includes('href="data:'));
+  assert.ok(!vbHtml.includes('href="vbscript:'));
   assert.ok(evilHtml.includes('Click Me'));
+  assert.ok(dataHtml.includes('Payload'));
 });
 
 test('markdownToHtml converts checkboxes and lists', () => {

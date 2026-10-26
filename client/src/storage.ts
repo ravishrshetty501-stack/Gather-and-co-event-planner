@@ -8,7 +8,7 @@ export function getSavedPlans(): SavedPlan[] {
     if (!data) return [];
     const parsed = JSON.parse(data);
     return Array.isArray(parsed) ? parsed : [];
-  } catch (err) {
+  } catch (err: unknown) {
     console.error('Failed to read saved plans from storage:', err);
     return [];
   }
@@ -27,7 +27,7 @@ export function savePlan(eventDetails: EventDetails, plan: EventPlan): SavedPlan
   plans.unshift(newPlan);
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(plans));
-  } catch (err) {
+  } catch (err: unknown) {
     console.error('Failed to save plan to storage:', err);
   }
   return newPlan;
@@ -48,7 +48,7 @@ export function updateSavedPlan(
     plans[idx].updatedAt = new Date().toISOString();
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(plans));
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('Failed to update plan in storage:', err);
     }
     return plans[idx];
@@ -63,7 +63,7 @@ export function deleteSavedPlan(id: string): boolean {
     const updated = plans.filter(p => String(p.id).trim() !== String(id).trim());
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
     return updated.length < initialLen;
-  } catch (err) {
+  } catch (err: unknown) {
     console.error('Failed to delete plan from storage:', err);
     return false;
   }
@@ -72,7 +72,7 @@ export function deleteSavedPlan(id: string): boolean {
 export function clearAllSavedPlans(): void {
   try {
     localStorage.removeItem(STORAGE_KEY);
-  } catch (err) {
+  } catch (err: unknown) {
     console.error('Failed to clear saved plans from storage:', err);
   }
 }

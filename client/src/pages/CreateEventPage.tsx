@@ -1,16 +1,14 @@
-import { useState, useEffect, type FormEvent } from 'react';
+import { useState, useEffect, useMemo, useCallback, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  ArrowRight,
-  RotateCcw,
   Sparkles,
-  Calendar,
-  IndianRupee,
-  Users,
   Compass,
+  RotateCcw,
+  ArrowRight,
 } from 'lucide-react';
 import { EVENT_TYPES, FOOD_PREFERENCES } from '../types';
 import type { EventDetails } from '../types';
+import { formatCompactINR, formatINR, calculatePerGuest } from '../utils/formatters';
 
 interface Props {
   initialDetails?: EventDetails | null;
@@ -48,16 +46,20 @@ export default function CreateEventPage({ initialDetails, onSubmit, isLoading, o
     }
   }, [initialDetails]);
 
-  const update = (field: keyof EventDetails, value: string | number) => {
+  const update = useCallback((field: keyof EventDetails, value: string | number) => {
     setForm(prev => ({ ...prev, [field]: value }));
-    if (errors[field]) {
-      setErrors(prev => {
-        const next = { ...prev };
-        delete next[field];
-        return next;
-      });
-    }
-  };
+    setErrors(prev => {
+      if (!prev[field]) return prev;
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
+  }, []);
+
+  const perGuestEstimate = useMemo(
+    () => calculatePerGuest(form.budget, form.guestCount),
+    [form.budget, form.guestCount]
+  );
 
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -81,12 +83,6 @@ export default function CreateEventPage({ initialDetails, onSubmit, isLoading, o
   const handleReset = () => {
     setForm(DEFAULT_FORM);
     setErrors({});
-  };
-
-  const formatBudget = (value: number) => {
-    if (value >= 10000000) return `₹${(value / 10000000).toFixed(1)} Cr`;
-    if (value >= 100000) return `₹${(value / 100000).toFixed(1)} L`;
-    return `₹${value.toLocaleString('en-IN')}`;
   };
 
   return (
@@ -298,13 +294,13 @@ export default function CreateEventPage({ initialDetails, onSubmit, isLoading, o
                       className={`preset-pill ${form.budget === preset ? 'active' : ''}`}
                       onClick={() => update('budget', preset)}
                     >
-                      {formatBudget(preset)}
+                      {formatCompactINR(preset)}
                     </button>
                   ))}
                 </div>
                 {form.budget > 0 && (
                   <span className="form-hint">
-                    {formatBudget(form.budget)} total · ~{formatBudget(Math.round(form.budget / (form.guestCount || 1)))} per guest
+                    {formatINR(form.budget)} total · ~{formatINR(perGuestEstimate)} per guest
                   </span>
                 )}
                 {errors.budget && (
