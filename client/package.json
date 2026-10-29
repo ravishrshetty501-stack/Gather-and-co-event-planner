@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "test": "node --test test/markdown.test.js test/formatters.test.js"
+    "test": "node --test test/markdown.test.js test/formatters.test.js test/storage.test.js"
   },
   "devDependencies": {
     "@types/react": "^19.3.0",

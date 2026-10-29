@@ -214,10 +214,16 @@ export default function ResultsPage({
     window.print();
   }, []);
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = useCallback(() => {
     setShowDeleteModal(false);
     onDeletePlan();
-  };
+  }, [onDeletePlan]);
+
+  const perGuest = useMemo(
+    () => (eventDetails ? calculatePerGuest(eventDetails.budget, eventDetails.guestCount) : 0),
+    [eventDetails?.budget, eventDetails?.guestCount]
+  );
+  const sectionKeys = useMemo(() => (plan ? Object.keys(plan) : []), [plan]);
 
   if (!plan || !eventDetails) {
     return (
@@ -235,12 +241,6 @@ export default function ResultsPage({
       </div>
     );
   }
-
-  const perGuest = useMemo(
-    () => calculatePerGuest(eventDetails.budget, eventDetails.guestCount),
-    [eventDetails.budget, eventDetails.guestCount]
-  );
-  const sectionKeys = useMemo(() => Object.keys(plan), [plan]);
 
   return (
     <div className="page-container producer-workspace" ref={printRef}>

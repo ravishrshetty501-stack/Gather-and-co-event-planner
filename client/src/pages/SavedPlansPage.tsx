@@ -12,6 +12,7 @@ import {
 import { getSavedPlans, deleteSavedPlan, clearAllSavedPlans } from '../storage';
 import ConfirmModal from '../components/ConfirmModal';
 import type { SavedPlan, Toast } from '../types';
+import { formatINR, formatDateINR } from '../utils/formatters';
 
 interface Props {
   currentPlanId?: string | null;
@@ -109,9 +110,7 @@ export default function SavedPlansPage({
                 {plan.eventDetails.date && (
                   <span>
                     <Calendar size={13} />
-                    {new Date(plan.eventDetails.date).toLocaleDateString('en-IN', {
-                      dateStyle: 'medium',
-                    })}
+                    {formatDateINR(plan.eventDetails.date)}
                   </span>
                 )}
                 <span>
@@ -120,10 +119,10 @@ export default function SavedPlansPage({
                 </span>
                 <span>
                   <IndianRupee size={13} />
-                  ₹{plan.eventDetails.budget.toLocaleString('en-IN')}
+                  {formatINR(plan.eventDetails.budget)}
                 </span>
                 <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                  Saved {new Date(plan.createdAt).toLocaleDateString('en-IN', { dateStyle: 'medium' })}
+                  Saved {formatDateINR(plan.createdAt)}
                 </span>
               </div>
               <div className="plan-actions">

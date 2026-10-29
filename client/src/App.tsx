@@ -34,6 +34,14 @@ function AppRoutes() {
   const [isDemo, setIsDemo] = useState(false);
   const [toasts, setToasts] = useState<Toast[]>([]);
 
+  /** Reset all plan-related state to its initial empty values. */
+  const resetPlanState = useCallback(() => {
+    setEventDetails(null);
+    setPlan(null);
+    setCurrentPlanId(null);
+    setIsDemo(false);
+  }, []);
+
   const addToast = useCallback((message: string, type: Toast['type']) => {
     const id = `toast-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
     setToasts(prev => [...prev, { id, message, type }]);
@@ -69,7 +77,7 @@ function AppRoutes() {
     setPlan(demoPlan);
     setCurrentPlanId(null);
     setIsDemo(true);
-  }, []);
+  }, []); // NOTE: intentionally does not use resetPlanState — it sets non-null values
 
   const handleLoadPlan = useCallback((savedPlan: SavedPlan) => {
     setEventDetails(savedPlan.eventDetails);
@@ -85,40 +93,28 @@ function AppRoutes() {
   }, []);
 
   const handleNewPlan = useCallback(() => {
-    setEventDetails(null);
-    setPlan(null);
-    setCurrentPlanId(null);
-    setIsDemo(false);
+    resetPlanState();
     navigate('/create');
-  }, [navigate]);
+  }, [resetPlanState, navigate]);
 
   const handleClearPlan = useCallback(() => {
-    setEventDetails(null);
-    setPlan(null);
-    setCurrentPlanId(null);
-    setIsDemo(false);
-  }, []);
+    resetPlanState();
+  }, [resetPlanState]);
 
   const handleDeleteCurrentPlan = useCallback(() => {
     if (currentPlanId) {
       deleteSavedPlan(currentPlanId);
     }
-    setEventDetails(null);
-    setPlan(null);
-    setCurrentPlanId(null);
-    setIsDemo(false);
+    resetPlanState();
     addToast('Event plan deleted.', 'success');
     navigate('/saved');
-  }, [currentPlanId, navigate, addToast]);
+  }, [currentPlanId, resetPlanState, navigate, addToast]);
 
   const handlePlanDeleted = useCallback((deletedId: string) => {
     if (currentPlanId === deletedId) {
-      setEventDetails(null);
-      setPlan(null);
-      setCurrentPlanId(null);
-      setIsDemo(false);
+      resetPlanState();
     }
-  }, [currentPlanId]);
+  }, [currentPlanId, resetPlanState]);
 
   const handleUpdatePlan = useCallback((updated: EventPlan) => {
     setPlan(updated);
